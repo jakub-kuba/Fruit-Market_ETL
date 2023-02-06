@@ -67,26 +67,32 @@ def process_data(no, address, prices, pl_eng_columns, cols):
     if not set(list(pl_eng_columns.keys())).issubset(market.columns):
         print("The table does not contain the required columns.")
         sys.exit()
-        
-    market.rename(columns=pl_eng_columns, inplace=True)
-    df = market[cols].copy()
-    df = df.loc[df['Unit'] == 'kg']
-    df = df[df['Name'].notna()]
-    df[prices] = df[prices].replace('zł', '', regex=True)
-    df[prices] = df[prices].replace(',', '.', regex=True)
-    df['Max'] = np.where((df['Max'].isnull()) & (df['Min'].notna()),
-                             df['Min'], df['Max'])
-    df['Min'] = np.where((df['Min'].isnull()) & (df['Max'].notna()),
-                             df['Max'], df['Min'])
-    for col in df.columns:
-        df[col] = df[col].str.strip()
-    df['Name'] = df['Name'].replace(" polska", "", regex=True)
-    df[prices] = df[prices].replace(" ", "", regex=True)
-    df[prices] = df[prices].replace("-", np.nan, regex=True)
-    df[prices] = df[prices].astype(float)
-    df['Avarage_Price'] = df[prices].mean(axis=1)
-    df['Name'] = df['Name'].str.split(':').str[0]
-    df = df.loc[~df['Name'].str.contains('mix')]
+
+    try:
+        market.rename(columns=pl_eng_columns, inplace=True)
+        df = market[cols].copy()
+        df = df.loc[df['Unit'] == 'kg']
+        df = df[df['Name'].notna()]
+        df[prices] = df[prices].replace('zł', '', regex=True)
+        df[prices] = df[prices].replace(',', '.', regex=True)
+
+        df['Max'] = np.where((df['Max'].str.count("\.") > 1), np.nan, df['Max'])
+        df['Max'] = np.where((df['Max'].isnull()) | (df['Min'].isnull()),
+                                np.nan, df['Max'])
+        df['Min'] = np.where((df['Max'].isnull()) | (df['Min'].isnull()),
+                                np.nan, df['Min'])
+        for col in df.columns:
+            df[col] = df[col].str.strip()
+        df['Name'] = df['Name'].replace(" polska", "", regex=True)
+        df[prices] = df[prices].replace(" ", "", regex=True)
+        df[prices] = df[prices].replace("-", np.nan, regex=True)
+        df[prices] = df[prices].astype(float)
+        df['Avarage_Price'] = df[prices].mean(axis=1)
+        df['Name'] = df['Name'].str.split(':').str[0]
+        df = df.loc[~df['Name'].str.contains('mix')]
+    except:
+        print("Problems with data on website.")
+        sys.exit()
     return df
 
 
@@ -170,8 +176,6 @@ def main():
 
     check_date = get_website_date(address)
     my_date = get_last_date('fruit', mkt)
-
-    #my_date = '10.10.2022'
 
     print("website date:", check_date)
     print("last database date:", my_date)
