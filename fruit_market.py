@@ -73,10 +73,10 @@ def process_data(no, address, prices, pl_eng_columns, cols):
         df = market[cols].copy()
         df = df.loc[df['Unit'] == 'kg']
         df = df[df['Name'].notna()]
-        df[prices] = df[prices].replace('zł', '', regex=True)
+        df[prices] = df[prices].replace(r'(?i)zł', '', regex=True)
         df[prices] = df[prices].replace(',', '.', regex=True)
-
         df['Max'] = np.where((df['Max'].str.count("\.") > 1), np.nan, df['Max'])
+        df['Min'] = np.where((df['Min'].str.count("\.") > 1), np.nan, df['Min'])
         df['Max'] = np.where((df['Max'].isnull()) | (df['Min'].isnull()),
                                 np.nan, df['Max'])
         df['Min'] = np.where((df['Max'].isnull()) | (df['Min'].isnull()),
