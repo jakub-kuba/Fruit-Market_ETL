@@ -3,15 +3,17 @@
 import pandas as pd
 import ssl
 import numpy as np
-from textblob import TextBlob
-from textblob import Word
+from textblob import TextBlob, Word
 import requests
 import bs4
 import sys
 from datetime import datetime
 import time
+import re
 
-#import data from engine.py
+#import data from engine.py/db_engine.py
+
+# from db_engine import engine
 from engine import engine
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -30,10 +32,14 @@ def get_website_date(address):
         print("Problem with the source website!")
         sys.exit()
     try:
-        date = elems[0].getText()[-10:]
+        full_text = elems[0].getText()
+        match = re.search(r'\d{2}\.\d{2}\.\d{4}', full_text)
+        if not match:
+            raise ValueError("Date not found in the element")
+        date = match.group()
         datetime.strptime(date, '%d.%m.%Y')
     except:
-        print("Problem with the source website!")
+        print("Problem with the website date!")
         sys.exit()
     return date
 
@@ -75,6 +81,7 @@ def process_data(no, address, prices, pl_eng_columns, cols):
         df = df[df['Name'].notna()]
         df[prices] = df[prices].replace(r'(?i)zł', '', regex=True)
         df[prices] = df[prices].replace(',', '.', regex=True)
+
         df['Max'] = np.where((df['Max'].str.count("\.") > 1), np.nan, df['Max'])
         df['Min'] = np.where((df['Min'].str.count("\.") > 1), np.nan, df['Min'])
         df['Max'] = np.where((df['Max'].isnull()) | (df['Min'].isnull()),
@@ -110,7 +117,7 @@ def translate_list(my_list):
             sys.exit()
     return final_list
 
-
+        
 def create_dataframe(date, row_list):
     """Creates an initial DataFrame with the required rows."""
     first_cols = {'Date': date,
@@ -147,7 +154,7 @@ def overwrite_csv(df, csv_file):
     df_list.append(df_pivot)
     df_concat = pd.concat(df_list)
     df_concat.to_csv(csv_file, index=False)
-    
+
 
 def main():
     #variables with column names
@@ -206,7 +213,7 @@ def main():
 
     else:
         print("No new data on the website.")
-
-
+    time.sleep(1)
+        
 if __name__ == "__main__":
     main()
